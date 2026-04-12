@@ -36,6 +36,7 @@ yarn-error.log
 /GEMINI.md
 /.claude
 /AGENTS.md
+/agents/
 /opencode.json
 /.cursor
 /.opencode

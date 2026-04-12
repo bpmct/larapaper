@@ -193,7 +193,10 @@ Route::get('/display', function (Request $request, DeviceSensorService $sensorSe
             } elseif (Storage::disk('public')->exists('images/generated/'.$image_uuid.'.png')) {
                 $image_path = 'images/generated/'.$image_uuid.'.png';
             } else {
-                $image_path = 'images/generated/'.$image_uuid.'.bmp';
+                // File missing (e.g. after redeploy) — clear stale UUID and regenerate
+                $device->update(['current_screen_image' => null]);
+                $image_uuid = ImageGenerationService::generateDefaultScreenImage($device, 'setup-logo');
+                $image_path = 'images/generated/'.$image_uuid.'.png';
             }
             $filename = basename($image_path);
         }

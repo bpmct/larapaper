@@ -50,6 +50,14 @@ RUN npm ci --no-audit \
 ########################
 FROM base AS production
 
+# Switch to root to add entrypoint script
+USER root
+
+# Add startup script to ensure the volume-mounted storage directory
+# has correct permissions and the images/generated subdir exists.
+# Runs at every container start before php-fpm launches.
+COPY --chmod=755 docker/55-fix-volume-permissions.sh /etc/entrypoint.d/55-fix-volume-permissions.sh
+
 # Copy the assets from the assets image
 COPY --chown=www-data:www-data --from=assets /app/public/build /var/www/html/public/build
 COPY --chown=www-data:www-data --from=assets /app/node_modules /var/www/html/node_modules

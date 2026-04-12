@@ -72,6 +72,17 @@ docker compose down
 docker compose up -d
 ```
 
+#### Railway
+Deploy LaraPaper to [Railway](https://railway.com) with PostgreSQL in a few clicks — no server management needed.
+
+See the full guide: [docs/RAILWAY.md](docs/RAILWAY.md)
+
+**Quick summary:**
+1. Deploy from your GitHub fork — Railway detects the `Dockerfile` automatically
+2. Add a **PostgreSQL** database service
+3. Set required env vars: `APP_KEY`, `APP_URL`, `DB_CONNECTION=pgsql`, `DB_URL`, `NGINX_HTTP_PORT=80`, `PORT=80`, `FORCE_HTTPS=1`, `TRUSTED_PROXIES=*`
+4. Set the service networking port to `80`
+
 #### VPS
 If you’re using a VPS (e.g., Hetzner) and prefer an alternative to native Docker, you can install Dokploy and deploy LaraPaper using the integrated [Template](https://templates.dokploy.com/?q=trmnl+byos+laravel).
 It’s a quick way to get started without having to manually manage Docker setup.

@@ -14,8 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $proxies = env('TRUSTED_PROXIES', '');
         $middleware->trustProxies(
-            at: config('trustedproxy.proxies'),
+            at: $proxies === '*' ? '*' : array_filter(explode(',', $proxies)),
         );
         $middleware->alias([
             'abilities' => CheckAbilities::class,

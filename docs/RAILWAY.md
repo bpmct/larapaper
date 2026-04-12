@@ -37,7 +37,30 @@ NGINX_HTTP_PORT=80
 PORT=80
 ```
 
-## 4. Set Environment Variables
+## 4. Attach a Volume for Persistent Image Storage
+
+Generated screen images are written to `storage/app/public/images/generated/`. Without a persistent volume, every redeploy wipes them and devices get a stale UUID pointing to a missing file.
+
+1. Go to your `larapaper` service → **Volumes**
+2. Click **+ Add Volume** and mount it at:
+
+```
+/var/www/html/storage/app/public
+```
+
+**Important — volume ownership:** Railway mounts volumes as `root:root`. The PHP-FPM process runs as `www-data` and cannot write to the volume without a fix. `docker/55-fix-volume-permissions.sh` is registered in `/etc/entrypoint.d/` and runs automatically as root on every container start. It `chown`s the mount to `www-data` and pre-creates `images/generated/` so PHP-FPM can write immediately:
+
+```sh
+# docker/55-fix-volume-permissions.sh (runs on every start, before php-fpm)
+chmod 775 /var/www/html/storage/app/public
+chown www-data:www-data /var/www/html/storage/app/public
+mkdir -p /var/www/html/storage/app/public/images/generated
+chown -R www-data:www-data /var/www/html/storage/app/public/images
+```
+
+No manual action is needed — this is included in the image.
+
+## 5. Set Environment Variables
 
 In your service → **Variables** tab, set the following:
 
@@ -69,7 +92,7 @@ In your service → **Variables** tab, set the following:
 | `PHP_OPCACHE_ENABLE` | `1` | Improves PHP performance |
 | `REGISTRATION_ENABLED` | `0` | Disable open registration once your account is created |
 
-## 5. Link PostgreSQL (auto-inject)
+## 6. Link PostgreSQL (auto-inject)
 
 Instead of manually copying `DATABASE_URL`, you can link the services:
 
@@ -79,7 +102,7 @@ Instead of manually copying `DATABASE_URL`, you can link the services:
 
 Railway will inject the correct connection string automatically, even when the database is restarted.
 
-## 6. Deploy
+## 7. Deploy
 
 Push to your branch (or trigger a manual deploy from the Railway dashboard). Railway builds from the `Dockerfile` and runs migrations automatically via the image's `AUTORUN_ENABLED=true` entrypoint.
 
@@ -90,7 +113,7 @@ Watch the build logs — a successful deploy ends with:
 ✅ NGINX + PHP-FPM is running correctly.
 ```
 
-## 7. First Login
+## 8. First Login
 
 Navigate to your Railway public URL. Register an account — the first registered user becomes the admin.
 
@@ -126,3 +149,13 @@ Check that `DB_CONNECTION=pgsql` and `DB_URL` points to the Railway internal Pos
 ### Migrations didn't run
 
 The image runs `php artisan migrate --force` on startup automatically. Check deploy logs for migration output. If they failed (e.g. bad DB credentials), fix the env vars and redeploy.
+
+### Generated images lost after redeploy
+
+Ensure the volume is mounted at `/var/www/html/storage/app/public` (see [step 4](#4-attach-a-volume-for-persistent-image-storage)). Without the volume, generated images are stored on the container's ephemeral filesystem and are wiped on every deploy.
+
+If devices were deployed *before* the volume was attached, `devices.current_screen_image` may hold a UUID whose file no longer exists. The `/api/display` endpoint handles this automatically: when a requested image file is missing, it clears the stale UUID and calls `ImageGenerationService::generateDefaultScreenImage()` to regenerate — no manual DB edits needed.
+
+### Device returns `special_function: sleep` with no image
+
+This is normal when no playlist is assigned to a device. Assign at least one playlist item to the device to start receiving generated images.

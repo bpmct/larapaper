@@ -6,7 +6,7 @@
     "workspaceFolder": "/workspaces/laravel",
     "dockerComposeFile": "docker-compose.yaml",
     "forwardPorts": [ "nginx:80" ],
-    "postCreateCommand": "bash .devcontainer/setup.sh",
+    "postCreateCommand": "composer install && npm install && npm run build",
     "customizations": {
         "vscode": {
             "extensions": [

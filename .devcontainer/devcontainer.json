@@ -1,21 +1,30 @@
 {
-    "name": "LaravelServer",
-    "service": "cli",
-    "remoteUser": "user",
-    "shutdownAction": "stopCompose",
-    "workspaceFolder": "/workspaces/laravel",
-    "dockerComposeFile": "docker-compose.yaml",
-    "forwardPorts": [ "nginx:80" ],
-    "postCreateCommand": "composer install && npm install && npm run build",
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "bmewburn.vscode-intelephense-client",
-                "EditorConfig.EditorConfig",
-                "mikestead.dotenv",
-                "onecentlin.laravel-blade",
-                "laravel.vscode-laravel"
-            ]
-        }
+  "name": "LaraPaper",
+
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
     }
+  },
+
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  "remoteEnv": {
+    "APP_ENV": "local"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "Vue.volar"
+      ]
+    }
+  },
+
+  "forwardPorts": [8000]
 }

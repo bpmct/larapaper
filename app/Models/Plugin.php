@@ -288,10 +288,71 @@ class Plugin extends Model
         // unwrap IDX_0 if only one URL
         $finalPayload = (count($urls) === 1) ? reset($combinedResponse) : $combinedResponse;
 
+        // Apply transform_code if present (JavaScript function run via Node.js)
+        if (! empty($this->transform_code)) {
+            try {
+                $finalPayload = $this->applyTransformCode($finalPayload);
+            } catch (Exception $e) {
+                Log::warning("Failed to apply transform_code for plugin {$this->id} ({$this->name}): ".$e->getMessage());
+            }
+        }
+
         $this->update([
             'data_payload' => $finalPayload,
             'data_payload_updated_at' => now(),
         ]);
+    }
+
+    /**
+     * Apply JavaScript transform_code to the raw payload using Node.js.
+     * The transform_code must export a function named `transform(input)` that
+     * returns the transformed data as a plain object.
+     */
+    private function applyTransformCode(array $payload): array
+    {
+        $transformCode = $this->transform_code;
+        $inputJson = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        if ($inputJson === false) {
+            throw new Exception('Failed to JSON-encode payload for transform_code: '.json_last_error_msg());
+        }
+
+        // Build a Node.js runner script that calls transform() and prints the result
+        $runnerScript = <<<JS
+{$transformCode}
+
+try {
+    const input = {$inputJson};
+    const result = transform(input);
+    process.stdout.write(JSON.stringify(result));
+} catch (e) {
+    process.stderr.write('Transform error: ' + e.message);
+    process.exit(1);
+}
+JS;
+
+        $process = Process::run(['node', '--input-type=module'], input: $runnerScript);
+
+        // Fallback to CommonJS if module mode fails (e.g. transform uses var/function syntax)
+        if (! $process->successful()) {
+            $process = Process::run(['node'], input: $runnerScript);
+        }
+
+        if (! $process->successful()) {
+            throw new Exception('Node.js transform_code failed: '.$process->errorOutput());
+        }
+
+        $output = trim($process->output());
+        if (empty($output)) {
+            throw new Exception('transform_code returned empty output');
+        }
+
+        $result = json_decode($output, true);
+        if ($result === null) {
+            throw new Exception('transform_code output is not valid JSON: '.substr($output, 0, 200));
+        }
+
+        return $result;
     }
 
     private function parseResponse(Response $httpResponse): array

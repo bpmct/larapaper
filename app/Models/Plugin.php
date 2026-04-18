@@ -331,11 +331,11 @@ try {
 }
 JS;
 
-        $process = Process::run(['node', '--input-type=module'], input: $runnerScript);
+        $process = Process::input($runnerScript)->run(['node', '--input-type=module']);
 
         // Fallback to CommonJS if module mode fails (e.g. transform uses var/function syntax)
         if (! $process->successful()) {
-            $process = Process::run(['node'], input: $runnerScript);
+            $process = Process::input($runnerScript)->run(['node']);
         }
 
         if (! $process->successful()) {

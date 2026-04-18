@@ -31,16 +31,9 @@ class XmlResponseParser implements ResponseParser
         }
     }
 
-    private function xmlToArray(SimpleXMLElement $xml): array|string
+    private function xmlToArray(SimpleXMLElement $xml): array
     {
         $array = (array) $xml;
-
-        // If the element has no children/attributes but has text content (e.g. CDATA),
-        // return the string value directly rather than an empty array.
-        if (empty($array)) {
-            $text = (string) $xml;
-            return $text !== '' ? $text : [];
-        }
 
         foreach ($array as $key => $value) {
             if ($value instanceof SimpleXMLElement) {
@@ -59,7 +52,13 @@ class XmlResponseParser implements ResponseParser
     }
 
     function simplexml_load_string_strip_namespaces($xml_response) {
-        $xml = simplexml_load_string($xml_response);
+        // LIBXML_NOCDATA converts CDATA sections to plain text nodes so that
+        // (array) casts and (string) casts both return the text content correctly.
+        // Without this flag, <el><![CDATA[text]]></el> casts to array as
+        // [0 => SimpleXMLElement(0)] or [] instead of the expected string.
+        $flags = LIBXML_NOCDATA;
+
+        $xml = simplexml_load_string($xml_response, SimpleXMLElement::class, $flags);
         if ($xml === false) {
             return false;
         }
@@ -76,6 +75,6 @@ class XmlResponseParser implements ResponseParser
             array_merge(["ns="], array_fill(0, count($namespaces), '')),
             $xml_response
         );
-        return simplexml_load_string($xml_no_namespaces);
+        return simplexml_load_string($xml_no_namespaces, SimpleXMLElement::class, $flags);
     }
 }

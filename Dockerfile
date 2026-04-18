@@ -61,5 +61,9 @@ COPY --chmod=755 docker/55-fix-volume-permissions.sh /etc/entrypoint.d/55-fix-vo
 # Copy the assets from the assets image
 COPY --chown=www-data:www-data --from=assets /app/public/build /var/www/html/public/build
 COPY --chown=www-data:www-data --from=assets /app/node_modules /var/www/html/node_modules
+
+# Copy Node.js binary from assets stage so PHP can run JS transforms at runtime
+COPY --from=assets /usr/local/bin/node /usr/local/bin/node
+
 # Drop back to the www-data user
 USER www-data

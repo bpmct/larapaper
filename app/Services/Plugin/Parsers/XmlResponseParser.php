@@ -31,13 +31,27 @@ class XmlResponseParser implements ResponseParser
         }
     }
 
-    private function xmlToArray(SimpleXMLElement $xml): array
+    private function xmlToArray(SimpleXMLElement $xml): array|string
     {
         $array = (array) $xml;
+
+        // If the element has no children/attributes but has text content (e.g. CDATA),
+        // return the string value directly rather than an empty array.
+        if (empty($array)) {
+            $text = (string) $xml;
+            return $text !== '' ? $text : [];
+        }
 
         foreach ($array as $key => $value) {
             if ($value instanceof SimpleXMLElement) {
                 $array[$key] = $this->xmlToArray($value);
+            } elseif (is_array($value)) {
+                foreach ($value as $i => $item) {
+                    if ($item instanceof SimpleXMLElement) {
+                        $value[$i] = $this->xmlToArray($item);
+                    }
+                }
+                $array[$key] = $value;
             }
         }
 
